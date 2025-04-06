@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Wallet Verification for Discord</title>
+
+    <!-- Ethers.js v5 UMD -->
+    <script src="https://cdn.ethers.io/scripts/ethers-5.2.umd.min.js"></script>
+  </head>
+  <body>
+    <h2>Discord Wallet Verification</h2>
+
+    <!-- DiscordユーザーID等を取得する仕組み(仮) -->
+    <p>Discord ID: <span id="discord-id">123456789</span></p>
+
+    <button id="connectBtn">Connect Wallet</button>
+    <button id="signBtn" disabled>Sign Message</button>
+    <div id="status"></div>
+
+    <script>
+      let provider;
+      let signer;
+      let userAddress = null;
+
+      // 1) Connectボタン
+      document.getElementById("connectBtn").onclick = async () => {
+        if (!window.ethereum) {
+          alert("No crypto wallet found. Please install Metamask.");
+          return;
+        }
+        try {
+          // Ethers.js Providerを作成
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          // メタマスク等に接続
+          await provider.send("eth_requestAccounts", []);
+          signer = provider.getSigner();
+
+          userAddress = await signer.getAddress();
+          document.getElementById("status").innerText = "Wallet connected: " + userAddress;
+
+          // 署名ボタンを有効化
+          document.getElementById("signBtn").disabled = false;
+        } catch (err) {
+          console.error(err);
+          alert("Connection failed.");
+        }
+      };
+
+      // 2) Signボタン
+      document.getElementById("signBtn").onclick = async () => {
+        if (!signer) {
+          alert("Please connect your wallet first.");
+          return;
+        }
+
+        // Discord IDを読み取る(仮)
+        const discordId = document.getElementById("discord-id").innerText;
+
+        // 例: 視認しやすい署名メッセージ
+        //    "I am verifying my wallet for Collab.Mon. Discord ID: 123456789"
+        const message = `I am verifying my wallet for Collab.Mon. Discord ID: ${discordId}`;
+
+        try {
+          const signature = await signer.signMessage(message);
+
+          // 取得した署名を表示
+          document.getElementById("status").innerText =
+            "Signature: " + signature;
+
+          // 3) サーバーへ送信 (ここではFetch例)
+          //    実際には紐づけAPIなどを作って署名 & DiscordID & userAddress を送る
+          /*
+          const res = await fetch("https://your-backend.example.com/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              discordId: discordId,
+              message: message,
+              signature: signature
+            })
+          });
+          const data = await res.json();
+          if (data.success) {
+            alert("Verification success!");
+          } else {
+            alert("Verification failed: " + data.error);
+          }
+          */
+        } catch (err) {
+          console.error(err);
+          alert("Signature failed: " + err.message);
+        }
+      };
+    </script>
+  </body>
+</html>
