@@ -1,89 +1,111 @@
-/* script.js */
+// HTML要素の取得
+const connectBtn = document.getElementById("connectBtn");
+const signBtn = document.getElementById("signBtn");
+const statusDiv = document.getElementById("status");
 
-// グローバル変数
-let web3Modal;      // Web3Modalインスタンス
-let provider;       // provider (web3 provider)
-let ethersProvider; // ethers用のprovider
-let signer;         // ethers用のsigner
-let connectedAddress = null;
+let web3Modal;
+let provider;
+let signer;
+let selectedAccount;
 
-// ウィンドウ読み込み後に初期化
-window.addEventListener("load", async () => {
-  initWallet();
-  document.getElementById("connectBtn").addEventListener("click", onConnect);
-  document.getElementById("verifyBtn").addEventListener("click", onVerify);
-});
-
-// 1) WalletConnect + Web3Modalの初期化
-function initWallet() {
-  const providerOptions = {
-    walletconnect: {
-      package: window.WalletConnectProvider.default, // 組み込みスクリプトから参照
-      options: {
-        infuraId: "YOUR_INFURA_ID", // 例: InfuraなどのRPCを使う場合
-        // or rpc: { 1: "https://cloudflare-eth.com" } など
-      }
+// STEP 1: Web3Modal初期化
+function init() {
+  // WalletConnectのオプション: Monad Testnet用にchainIdを指定
+  const walletConnectProvider = {
+    package: window.WalletConnectProvider.default,
+    options: {
+      rpc: {
+        10143: "https://testnet-rpc.monad.xyz"
+      },
+      chainId: 10143,
     }
-    // ほかのプロバイダ（walletlink, binancechainwallet等）も必要に応じて追加
   };
 
+  const providerOptions = {
+    walletconnect: walletConnectProvider
+  };
+
+  // Web3Modal インスタンス化
   web3Modal = new window.Web3Modal.default({
-    cacheProvider: false, // リロード時に前回のプロバイダを記憶するか
+    cacheProvider: false,
     providerOptions,
-    theme: "light" // or "dark"
+    theme: "light"
   });
 }
 
-// 2) Connectボタンクリック時
+// STEP 2: ウォレット接続
 async function onConnect() {
   try {
-    provider = await web3Modal.connect();      // WalletConnect UIのポップアップ
-    ethersProvider = new ethers.providers.Web3Provider(provider);
-    signer = ethersProvider.getSigner();
-    connectedAddress = await signer.getAddress();
+    // モーダル表示してウォレット選択
+    const instance = await web3Modal.connect();
+    provider = new ethers.providers.Web3Provider(instance);
+    signer = provider.getSigner();
 
-    // UI反映
-    document.getElementById("connectedWallet").textContent =
-      "Connected Wallet: " + connectedAddress;
+    // どのアドレスで接続されたか?
+    selectedAccount = await signer.getAddress();
+    statusDiv.innerText = "Connected with address: " + selectedAccount;
+    signBtn.disabled = false;
   } catch (err) {
-    console.error("Connection failed:", err);
-    alert("Failed to connect wallet: " + err);
+    console.error(err);
+    statusDiv.innerText = "Connection failed";
   }
 }
 
-// 3) Verify & Register Wallet ボタンクリック時
-async function onVerify() {
-  if (!signer || !connectedAddress) {
-    alert("Please connect your wallet first.");
-    return;
-  }
-  // 例: Discordユーザー名（あるいはID）をDOMから取得
-  const username = document.getElementById("username").textContent;
-
-  // 視認しやすいメッセージ
-  const message = `I am verifying wallet ownership for The Daks.\nDiscord User: ${username}\nWallet: ${connectedAddress}`;
-
+// STEP 3: メッセージを署名 → サーバに送る(例)
+async function onSignMessage() {
   try {
-    // EIP-191のsignMessage
+    // DiscordユーザーIDやnonceなど、URLパラメータから取得
+    const queryParams = new URLSearchParams(window.location.search);
+    const discordId = queryParams.get("discord_id");
+    const nonce = queryParams.get("nonce") || Math.floor(Math.random() * 1000000);
+
+    // メッセージを作る
+    const message = `DiscordID: ${discordId}\nNonce: ${nonce}\nI am verifying my wallet ownership.`;
+
+    // Ethers.jsを使って署名
     const signature = await signer.signMessage(message);
 
-    console.log("Signature: ", signature);
+    statusDiv.innerText = 
+      "Address: " + selectedAccount + "\n" + 
+      "Signature: " + signature;
 
-    // TODO: ここでサーバーやGoogle Sheets連携のエンドポイントにFetch
-    //       署名、DiscordID/ユーザー名、ウォレットアドレスなどを送る
-    /*
-    const res = await fetch("https://your-backend.example.com/api/verify", {
+    // STEP 4: 署名をサーバーに送信 (POST)
+    // ※実際には自前サーバー(API)を立てて、検証＆スプレッドシート記入
+    //   ここではfetch例のみ記載
+    fetch("https://example.com/api/verify_signature", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        username,
-        address: connectedAddress,
-        message,
-        signature
+        discord_id: discordId,
+        wallet_address: selectedAccount,
+        signature: signature,
+        original_message: message
       })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        statusDiv.innerText += "\nServer verification success!";
+      } else {
+        statusDiv.innerText += "\nServer verification failed.";
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      statusDiv.innerText += "\nFailed to send to server.";
     });
-    const data = await res.json();
-    if (data.success) {
-      alert("Verification success!");
-    } else {
-      alert("
+
+  } catch (err) {
+    console.error(err);
+    statusDiv.innerText = "Signing failed";
+  }
+}
+
+// イベントリスナー設定
+connectBtn.addEventListener("click", onConnect);
+signBtn.addEventListener("click", onSignMessage);
+
+// 初期化
+window.addEventListener('load', async () => {
+  init();
+});
