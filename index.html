@@ -1,34 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>The DAKS Wallet Verification</title>
-    <link rel="stylesheet" href="styles.css" />
-    <!-- Ethers.js CDN -->
-    <script src="https://cdn.ethers.io/scripts/ethers-5.2.umd.min.js"></script>
-    <!-- Web3Modal v1 + WalletConnect v1 Provider -->
-    <script src="https://unpkg.com/web3modal@1.9.8/dist/index.js"></script>
-    <script src="https://unpkg.com/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
-  </head>
-  <body>
-    <header>
-      <h1>The Daks</h1>
-    </header>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Collab.Mon Wallet Verification</title>
+  <!-- Web3Modal (CDN) -->
+  <script src="https://unpkg.com/web3modal"></script>
+  <!-- WalletConnect Provider (CDN) -->
+  <script src="https://unpkg.com/@walletconnect/web3-provider/dist/umd/index.min.js"></script>
+  <!-- Ethers.js (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <h1>Collab.Mon Wallet Verification</h1>
+    <div class="content">
+      <button id="connectBtn">Connect Wallet</button>
+      <button id="signBtn" disabled>Sign Message</button>
+      <div id="status"></div>
+    </div>
+  </div>
 
-    <main>
-      <!-- 誰がログインしているかのテキスト（例: Discordユーザー名） -->
-      <p id="user-info">You are signed in as: <span id="username">tiggerland</span></p>
-
-      <!-- ウォレット接続ボタンや表示領域 -->
-      <div class="wallet-section">
-        <button id="connectBtn">Connect Wallet</button>
-        <p id="connectedWallet"></p> <!-- 接続されたウォレットアドレスを表示 -->
-
-        <button id="verifyBtn" class="verify-button">Verify &amp; Register Wallet</button>
-      </div>
-    </main>
-
-    <!-- スクリプト -->
-    <script src="script.js"></script>
-  </body>
+  <script src="script.js"></script>
+</body>
 </html>
