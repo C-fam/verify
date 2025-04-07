@@ -11,13 +11,14 @@ let selectedAccount;
 // STEP 1: Web3Modal初期化
 function init() {
   // WalletConnectのオプション: Monad Testnet用にchainIdを指定
+  // (MetaMaskなど別のウォレットでもTestnet接続する場合は事前にchain追加設定が必要)
   const walletConnectProvider = {
     package: window.WalletConnectProvider.default,
     options: {
       rpc: {
         10143: "https://testnet-rpc.monad.xyz"
       },
-      chainId: 10143,
+      chainId: 10143
     }
   };
 
@@ -25,7 +26,7 @@ function init() {
     walletconnect: walletConnectProvider
   };
 
-  // Web3Modal インスタンス化
+  // Web3Modal インスタンス作成
   web3Modal = new window.Web3Modal.default({
     cacheProvider: false,
     providerOptions,
@@ -38,66 +39,82 @@ async function onConnect() {
   try {
     // モーダル表示してウォレット選択
     const instance = await web3Modal.connect();
+
     provider = new ethers.providers.Web3Provider(instance);
     signer = provider.getSigner();
 
-    // どのアドレスで接続されたか?
+    // どのアドレスで接続されたか
     selectedAccount = await signer.getAddress();
-    statusDiv.innerText = "Connected with address: " + selectedAccount;
+
+    // UI更新
     signBtn.disabled = false;
+    statusDiv.innerText = "Connected with address: " + selectedAccount;
   } catch (err) {
     console.error(err);
-    statusDiv.innerText = "Connection failed";
+    statusDiv.innerText = "Connection failed.\n" + err.message;
   }
 }
 
-// STEP 3: メッセージを署名 → サーバに送る(例)
+// STEP 3: メッセージ署名 → (ハリボテ)サーバ検証
 async function onSignMessage() {
   try {
-    // DiscordユーザーIDやnonceなど、URLパラメータから取得
+    // クエリパラメータからdiscord_id & nonceを取得
     const queryParams = new URLSearchParams(window.location.search);
-    const discordId = queryParams.get("discord_id");
-    const nonce = queryParams.get("nonce") || Math.floor(Math.random() * 1000000);
+    const discordId = queryParams.get("discord_id") || "unknown_user";
+    const nonce = queryParams.get("nonce") || Math.floor(Math.random() * 100000);
 
-    // メッセージを作る
+    // 署名用メッセージ
+    // NOTE: 実際の運用では \n やフォーマットを明確にしたメッセージを使う
     const message = `DiscordID: ${discordId}\nNonce: ${nonce}\nI am verifying my wallet ownership.`;
 
-    // Ethers.jsを使って署名
+    // Ethers.jsで署名を取る
     const signature = await signer.signMessage(message);
 
+    // UI更新
     statusDiv.innerText = 
-      "Address: " + selectedAccount + "\n" + 
-      "Signature: " + signature;
+      "✅ Wallet Address: " + selectedAccount + "\n" +
+      "✅ Signature: " + signature + "\n\n";
 
-    // STEP 4: 署名をサーバーに送信 (POST)
-    // ※実際には自前サーバー(API)を立てて、検証＆スプレッドシート記入
-    //   ここではfetch例のみ記載
-    fetch("https://example.com/api/verify_signature", {
+    // ここから先はハリボテ。本来はサーバーに送って署名を検証する
+    // (本当にGoogleシートに書き込む場合は、下記fetch先でバックエンドAPIを立てる必要があります)
+    const payload = {
+      discord_id: discordId,
+      wallet_address: selectedAccount,
+      signature: signature,
+      original_message: message
+    };
+
+    // 署名をサーバーに送る(例)
+    // ※ GitHub Pagesのみではサーバーサイドが動かないので、ここはコメントアウトかダミーに
+    /*
+    fetch("https://your-backend.example.com/api/verify_signature", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        discord_id: discordId,
-        wallet_address: selectedAccount,
-        signature: signature,
-        original_message: message
-      })
+      body: JSON.stringify(payload)
     })
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        statusDiv.innerText += "\nServer verification success!";
+        statusDiv.innerText += "✅ Verification success! GoogleSheet updated.\n";
       } else {
-        statusDiv.innerText += "\nServer verification failed.";
+        statusDiv.innerText += "❌ Verification failed: " + (data.error || "Unknown error") + "\n";
       }
     })
     .catch(err => {
       console.error(err);
-      statusDiv.innerText += "\nFailed to send to server.";
+      statusDiv.innerText += "❌ Failed to send to server.\n" + err.message;
     });
+    */
+
+    // === ハリボテ動作 ===
+    // サーバーに送信はせず、強制的に「検証完了」と表示
+    setTimeout(() => {
+      statusDiv.innerText += "✅ [FAKE] Verification complete!\n(No real server call)";
+    }, 1000);
 
   } catch (err) {
     console.error(err);
-    statusDiv.innerText = "Signing failed";
+    statusDiv.innerText = "Signing failed.\n" + err.message;
   }
 }
 
