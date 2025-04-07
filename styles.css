@@ -1,73 +1,28 @@
-/* シンプルなデザインの例 */
-
 body {
   margin: 0;
   padding: 0;
-  font-family: Arial, sans-serif;
-  background: #f5f5f5;
-  color: #333;
+  font-family: sans-serif;
 }
 
-header {
-  background: #ececec;
-  padding: 1rem;
+#app {
+  width: 100%;
+  max-width: 500px;
+  margin: 80px auto;
   text-align: center;
 }
 
-h1 {
-  margin: 0;
-  font-size: 1.6rem;
+.content {
+  margin-top: 20px;
 }
 
-main {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 2rem;
-}
-
-#user-info {
-  font-size: 1rem;
-  margin-bottom: 2rem;
-}
-
-.wallet-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-#connectBtn,
-.verify-button {
+button {
+  margin: 5px;
+  padding: 10px 20px;
   cursor: pointer;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  border-radius: 9999px;
-  border: none;
-  outline: none;
-  transition: background 0.3s ease;
 }
 
-#connectBtn {
-  background: #3396FF;
-  color: #fff;
-}
-
-#connectBtn:hover {
-  background: #1d7ae0;
-}
-
-.verify-button {
-  background: #5d00ba; /* 例: 紫 */
-  color: #fff;
-}
-
-.verify-button:hover {
-  background: #490093;
-}
-
-#connectedWallet {
-  margin: 0.5rem;
-  font-weight: bold;
+#status {
+  margin-top: 20px;
+  white-space: pre-wrap;
+  text-align: left;
 }
