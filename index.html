@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Collab.Mon Wallet Verification</title>
+  <title>Wallet Verification (Collab.Mon)</title>
   <!-- Web3Modal (CDN) -->
   <script src="https://unpkg.com/web3modal"></script>
   <!-- WalletConnect Provider (CDN) -->
@@ -14,9 +14,12 @@
 <body>
   <div id="app">
     <h1>Collab.Mon Wallet Verification</h1>
+    <p class="subtitle">Monad Testnet (chainId 10143)</p>
+
     <div class="content">
       <button id="connectBtn">Connect Wallet</button>
-      <button id="signBtn" disabled>Sign Message</button>
+      <button id="signBtn" disabled>Sign & Verify</button>
+
       <div id="status"></div>
     </div>
   </div>
