@@ -1,26 +1,111 @@
+<!-- static/index.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>test</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- Import the model-viewer component -->
-    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-    <script nomodule src="https://unpkg.com/@google/model-viewer/dist/model-viewer-legacy.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wallet Verification</title>
+  <!-- Web3Modal, WalletConnect, Ethers.js のCDNスクリプト -->
+  <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.8/dist/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <model-viewer 
-            src="test.glb"
-            ios-src="test.usdz"
-            alt="test"
-            ar
-            ar-modes="webxr scene-viewer quick-look"
-            environment-image="neutral"
-            auto-rotate
-            camera-controls>
-        </model-viewer>
-    </div>
+  <h2>Monad Testnet ウォレット所有検証</h2>
+  <p>DiscordユーザーID: <span id="discordIdText"></span></p>
+  <button id="connectBtn">ウォレット接続して署名</button>
+
+  <script>
+    // Discord IDとnonceをURLのクエリパラメータから取得
+    const params = new URLSearchParams(window.location.search);
+    const discordId = params.get('discord_id');
+    const nonce = params.get('nonce');
+    document.getElementById('discordIdText').innerText = discordId || "(未指定)";
+
+    if (!discordId || !nonce) {
+      alert("Discord経由の正しいリンクからアクセスしてください。");
+    }
+
+    // Web3ModalとWalletConnectの初期設定
+    const Web3Modal = window.Web3Modal.default;
+    const WalletConnectProvider = window.WalletConnectProvider.default;
+    const providerOptions = {
+      walletconnect: {
+        package: WalletConnectProvider,
+        options: {
+          rpc: { 10143: "https://testnet-rpc.monad.xyz" }, // Monad Testnet RPC
+          chainId: 10143
+        }
+      }
+      // 他ウォレットオプションも必要に応じてここに追加可能（例：Fortmatic等）
+    };
+    const web3Modal = new Web3Modal({
+      cacheProvider: false,
+      providerOptions: providerOptions
+    });
+
+    // 「ウォレット接続して署名」ボタンがクリックされたときの処理
+    document.getElementById('connectBtn').addEventListener('click', async () => {
+      try {
+        // ユーザーにウォレット選択と接続を促す
+        const instance = await web3Modal.connect();
+        const provider = new ethers.providers.Web3Provider(instance);
+        // Monad Testnetに接続しているか確認し、違う場合はチェーンを切り替え/追加
+        const network = await provider.getNetwork();
+        if (network.chainId !== 10143) {
+          try {
+            await provider.provider.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: '0x279F' }]  // 0x279F は10143の16進数表記
+            });
+          } catch (switchError) {
+            // チェーンが未登録の場合は追加
+            if (switchError.code === 4902 || switchError.message.includes("unrecognized chain")) {
+              await provider.provider.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: '0x279F',
+                  chainName: 'Monad Testnet',
+                  rpcUrls: ['https://testnet-rpc.monad.xyz'],
+                  nativeCurrency: { name: 'tMONAD', symbol: 'tMONAD', decimals: 18 }
+                }]
+              });
+            } else {
+              throw switchError;
+            }
+          }
+        }
+
+        // サイン用メッセージを作成（Discord IDとnonceを含める）
+        const signer = provider.getSigner();
+        const message = `Verify Discord ID ${discordId} with nonce ${nonce}`;
+        // ユーザーにメッセージ署名を要求
+        const signature = await signer.signMessage(message);
+        const walletAddress = await signer.getAddress();
+
+        // 署名とウォレットアドレス、Discord ID, nonceをバックエンドに送信
+        const response = await fetch("/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            discord_id: discordId,
+            address: walletAddress,
+            signature: signature,
+            nonce: nonce
+          })
+        });
+        if (response.ok) {
+          alert("ウォレット検証に成功しました！Discord側での認証完了を確認してください。");
+        } else {
+          const errorData = await response.json();
+          console.error("Verification failed:", errorData);
+          alert("検証に失敗しました。もう一度お試しください。");
+        }
+      } catch (e) {
+        console.error(e);
+        alert("エラーが発生しました: " + e.message);
+      }
+    });
+  </script>
 </body>
 </html>
