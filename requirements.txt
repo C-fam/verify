@@ -1,0 +1,7 @@
+# requirements.txt
+discord.py==2.3.2        # Discord Bot用ライブラリ (バージョン2以降でslashコマンド対応)
+Flask==2.2.3            # Flaskウェブフレームワーク
+eth-account==0.8.0      # 署名検証に使用（Ethereumアカウント操作ライブラリ）
+gspread==5.7.2          # Googleスプレッドシート操作ライブラリ
+google-auth==2.17.3     # Google認証ライブラリ（gspread利用時に必要）
+python-dotenv==1.0.0    # .envから環境変数を読み込むためのライブラリ
